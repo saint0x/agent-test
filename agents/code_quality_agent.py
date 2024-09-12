@@ -3,6 +3,7 @@ import json
 from dotenv import load_dotenv
 from openai import OpenAI
 import fnmatch
+from utils.config_manager import root as get_project_root
 
 # Load environment variables
 load_dotenv()
@@ -90,15 +91,19 @@ class CodeQualityAgent:
 
         return any(fnmatch.fnmatch(file_path, pattern) for pattern in patterns_to_analyze)
 
-    def analyze_codebase_quality(self, base_path):
+    def analyze_codebase_quality(self):
         """
         Analyze the code quality of all relevant files in a codebase.
         """
+        project_root = get_project_root()
+        if not project_root:
+            raise FileNotFoundError("butterfly.config.py not found in this or any parent directory")
+
         file_paths = []
         file_contents = []
-        for root, _, files in os.walk(base_path):
+        for root_dir, _, files in os.walk(project_root):
             for file in files:
-                file_path = os.path.join(root, file)
+                file_path = os.path.join(root_dir, file)
                 if self.should_analyze_file(file_path):
                     try:
                         with open(file_path, 'r', encoding='utf-8') as f:
@@ -112,8 +117,7 @@ class CodeQualityAgent:
 
 def main():
     agent = CodeQualityAgent()
-    base_path = "."  # Current directory
-    results = agent.analyze_codebase_quality(base_path)
+    results = agent.analyze_codebase_quality()
     
     # Wrap the results in a dictionary with the key "CODE_QUALITY_ANALYSIS"
     output = {"CODE_QUALITY_ANALYSIS": results}
