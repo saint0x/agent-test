@@ -9,7 +9,6 @@ setup(
         "openai",
         "python-dotenv",
         "requests",
-        # Add other dependencies here
     ],
     entry_points={
         "console_scripts": [

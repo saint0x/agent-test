@@ -5,6 +5,10 @@
 .env.test.local
 .env.production.local
 
+# Butterfly files
+/workspaces/butterfly/butterfly.config.py
+/workspaces/butterfly/setup.py
+
 # Python
 __pycache__/
 *.py[cod]
