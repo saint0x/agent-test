@@ -10,14 +10,14 @@ class UserCreate(BaseModel):
 
 
 def authenticate_user(api_key: str):
-    user = get_user(api_key)
-    if not user:
+    keys = get_user(api_key)
+    if not keys:
         return False
-    return user
+    return keys
 
 
 async def get_current_user(api_key: str = Depends(oauth2_scheme)):
-    user = get_user(api_key)
-    if user is None:
+    keys = get_user(api_key)
+    if keys is None:
         raise HTTPException(status_code=401, detail="API key not found")
-    return user
+    return keys

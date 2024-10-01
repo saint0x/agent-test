@@ -37,3 +37,19 @@ def insert_user(api_key: str):
         print(f"❌ Failed to insert API key: {e}")
     finally:
         conn.close()
+
+
+def delete_user(api_key: str):
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('DELETE FROM api_keys WHERE api_key = ?', (api_key,))
+        if cursor.rowcount == 0:
+            print("❌ API key does not exist.")
+        else:
+            conn.commit()
+            print("✅ API key deleted successfully.")
+    except Exception as e:
+        print(f"❌ Failed to delete API key: {e}")
+    finally:
+        conn.close()

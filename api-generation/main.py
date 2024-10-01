@@ -10,7 +10,7 @@ import socket
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db_utils import create_tables, get_user, insert_user  # Updated import
+from db_utils import create_tables, get_user, insert_user, delete_user  # Updated import
 from auth_utils import authenticate_user  # type: ignore
 from rate_limit_utils import RateLimiter  # Updated import
 from cors_utils import CORSConfig  # Updated import
@@ -55,14 +55,23 @@ async def root():
 
 @app.post("/api_key")
 async def create_api_key(api_key: str = Query(...)):  # Use Query to require the api_key
+    if get_user(api_key):
+        logger.error("❌ API key already exists.")
+        raise HTTPException(status_code=400, detail="API key already exists.")
     insert_user(api_key)  # Insert the API key into the database
     logger.info(f"✅ API key {api_key} created successfully.")
     return {"message": "API key created successfully."}
 
+@app.delete("/api_key")
+async def delete_api_key(api_key: str = Query(...)):  # Use Query to require the api_key
+    delete_user(api_key)  # Delete the API key from the database
+    logger.info(f"✅ API key {api_key} deleted successfully.")
+    return {"message": "API key deleted successfully."}
+
 @app.get("/authenticate")
 async def authenticate(api_key: str):
-    user = authenticate_user(api_key)
-    if user:
+    keys = authenticate_user(api_key)
+    if keys:
         logger.info("✅ API key authenticated successfully.")
         return {"message": "API key is valid"}
     else:
