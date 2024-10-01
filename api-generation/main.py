@@ -1,17 +1,17 @@
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from datetime import timedelta
 import os
 import sys
 import logging  # Import logging
+import socket
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db_utils import create_tables, get_user, insert_user  # type: ignore
-from auth_utils import User, verify_password, get_password_hash, authenticate_user, UserCreate  # type: ignore
-from jwt_utils import create_access_token, decode_token, ACCESS_TOKEN_EXPIRE_MINUTES, Token  # type: ignore
+from db_utils import create_tables, get_user, insert_user  # Updated import
+from auth_utils import authenticate_user  # type: ignore
 from rate_limit_utils import RateLimiter  # Updated import
 from cors_utils import CORSConfig  # Updated import
 
@@ -23,10 +23,19 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Function to find an open port
+
+def find_open_port(start_port=3000, end_port=4000):
+    for port in range(start_port, end_port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('0.0.0.0', port)) != 0:
+                return port
+    raise RuntimeError("No available ports found")
+
 # Use lifespan for startup and shutdown events
 async def lifespan(app: FastAPI):
     logger.info("🚀 Backend is starting...")
-    create_tables()
+    create_tables()  # Ensure tables are created on startup
     yield
     logger.info("🛑 Backend is shutting down...")
 
@@ -44,8 +53,25 @@ async def root():
     logger.info("🌍 Root endpoint accessed")  # Log with emoji
     return {"message": "API is running"}
 
+@app.post("/api_key")
+async def create_api_key(api_key: str = Query(...)):  # Use Query to require the api_key
+    insert_user(api_key)  # Insert the API key into the database
+    logger.info(f"✅ API key {api_key} created successfully.")
+    return {"message": "API key created successfully."}
+
+@app.get("/authenticate")
+async def authenticate(api_key: str):
+    user = authenticate_user(api_key)
+    if user:
+        logger.info("✅ API key authenticated successfully.")
+        return {"message": "API key is valid"}
+    else:
+        logger.error("❌ API key authentication failed.")
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
 if __name__ == "__main__":
     import uvicorn
     host = os.getenv("API_HOST", "0.0.0.0")
-    port = int(os.getenv("API_PORT", 8000))
+    port = find_open_port()  # Find an open port
+    logger.info(f"Starting server on port {port}")
     uvicorn.run(app, host=host, port=port)

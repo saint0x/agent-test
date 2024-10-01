@@ -1,12 +1,21 @@
 import os
 import json
 import sqlite3
+import logging
 from agents.architecture_agent import ArchitectureAgent
 from agents.code_quality_agent import CodeQualityAgent
 from agents.dependency_agent import DependencyAgent
 from agents.performance_agent import PerformanceAgent
 from agents.static_agent import StaticAgent
 from dotenv import load_dotenv
+from db_utils import insert_user  # Corrected import path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -80,5 +89,13 @@ def append_results_to_db(results):
     print("[green]Results appended to the database successfully.[/green]")
     conn.close()
 
+# Function to insert API key into the database
+
+def insert_api_key(api_key):
+    logger.info(f"Inserting API key: {api_key}")  # Log the API key being inserted
+    insert_user(api_key)  # Call the insert_user function to store the API key
+
 if __name__ == '__main__':
     run_all_analyses()
+    # Example of inserting an API key
+    insert_api_key('your_api_key_here')  # Replace with the actual API key you want to insert

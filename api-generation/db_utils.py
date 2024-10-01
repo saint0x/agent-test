@@ -2,28 +2,38 @@ import sqlite3
 
 DATABASE_PATH = 'butterfly_api_keys.db'
 
+
 def create_tables():
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users
-    (username TEXT PRIMARY KEY, hashed_password TEXT)
+    CREATE TABLE IF NOT EXISTS api_keys
+    (api_key TEXT PRIMARY KEY)
     ''')
     conn.commit()
     conn.close()
 
-def get_user(username: str):
+
+def get_user(api_key: str):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT username, hashed_password FROM users WHERE username = ?', (username,))
+    cursor.execute('SELECT api_key FROM api_keys WHERE api_key = ?', (api_key,))
     result = cursor.fetchone()
     conn.close()
     if result:
-        return {"username": result[0], "hashed_password": result[1]}  # Return a dictionary
+        return {"api_key": result[0]}  # Return a dictionary
 
-def insert_user(username: str, hashed_password: str):
+
+def insert_user(api_key: str):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO users (username, hashed_password) VALUES (?, ?)', (username, hashed_password))
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute('INSERT INTO api_keys (api_key) VALUES (?)', (api_key,))
+        conn.commit()
+        print("✅ API key inserted successfully.")
+    except sqlite3.IntegrityError:
+        print("❌ API key already exists.")
+    except Exception as e:
+        print(f"❌ Failed to insert API key: {e}")
+    finally:
+        conn.close()
