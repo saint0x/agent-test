@@ -10,7 +10,7 @@ from rich.table import Table
 from rich import box
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
-from agents.manager_agent import analyze_codebase
+from agents.manager_agent import ManagerAgent  # Updated import
 from utils.env_manager import set_api_key, get_api_key
 from utils.config_manager import root, create_config_file, load_config, update_config
 from utils.api_client import ButterflyAPIClient
@@ -19,16 +19,17 @@ from utils.visual_utils import create_header, create_section, create_table, form
 
 console = Console()
 
-def run_background_analysis():
+def run_background_analysis(manager_agent):
     while True:
         try:
-            results = analyze_codebase()
+            results = manager_agent.analyze_codebase()  # Call on instance
             # Process results (e.g., send to server, update local files, etc.)
             console.print("[green]Analysis completed successfully.[/green]")
         except Exception as e:
             console.print(f"[red]Error during analysis: {str(e)}[/red]")
         # Wait for some time before the next analysis
         threading.Event().wait(3600)  # Run every hour
+
 
 def main():
     console.print(create_header())
@@ -56,8 +57,9 @@ def main():
 
     console.print("[cyan]Butterfly is now running in the background. You can continue your development.[/cyan]")
 
+    manager_agent = ManagerAgent()  # Create an instance of ManagerAgent
     # Start background analysis
-    threading.Thread(target=run_background_analysis, daemon=True).start()
+    threading.Thread(target=run_background_analysis, args=(manager_agent,), daemon=True).start()  # Pass instance
 
     with Progress(
         SpinnerColumn(),
@@ -65,7 +67,7 @@ def main():
         console=console
     ) as progress:
         task = progress.add_task("[green]Analyzing codebase...", total=None)
-        report_data = analyze_codebase()
+        report_data = manager_agent.analyze_codebase()  # Call on instance
         progress.update(task, completed=True)
 
     console.log("Codebase analysis complete.")
