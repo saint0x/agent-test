@@ -29,103 +29,38 @@ class ManagerAgent:
 
     def generate_report(self, agent_outputs):
         """
-        Generate a comprehensive report based on the outputs of specialized agents.
+        Generate a structured report based on the outputs of specialized agents.
         
         :param agent_outputs: A dictionary containing the outputs from each specialized agent
-        :return: A JSON object containing the aggregated report
+        :return: A JSON object containing the structured report
         """
-        # Log the outputs from each agent for debugging
-        for agent_name, output in agent_outputs.items():
-            print(f"[DEBUG] {agent_name} output: {output}")
+        structured_report = {
+            "ARCHITECTURE_ANALYSIS": agent_outputs.get("ARCHITECTURE_ANALYSIS"),
+            "CODE_QUALITY_ANALYSIS": agent_outputs.get("CODE_QUALITY_ANALYSIS"),
+            "DEPENDENCY_AUDIT": agent_outputs.get("DEPENDENCY_AUDIT"),
+            "PERFORMANCE_ANALYSIS": agent_outputs.get("PERFORMANCE_ANALYSIS"),
+            "STATIC_CODE_ANALYSIS": agent_outputs.get("STATIC_CODE_ANALYSIS"),
+        }
 
-        tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "generate_comprehensive_report",
-                    "description": "Generate a comprehensive security and quality report based on various analyses",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "overallSummary": {"type": "string"},
-                            "securityAssessment": {
-                                "type": "object",
-                                "properties": {
-                                    "overallRisk": {"type": "string", "enum": ["Low", "Medium", "High", "Critical"]},
-                                    "keyVulnerabilities": {"type": "array", "items": {"type": "string"}},
-                                    "recommendations": {"type": "array", "items": {"type": "string"}}
-                                }
-                            },
-                            "codeQualityAssessment": {
-                                "type": "object",
-                                "properties": {
-                                    "overallQuality": {"type": "string", "enum": ["Poor", "Fair", "Good", "Excellent"]},
-                                    "keyIssues": {"type": "array", "items": {"type": "string"}},
-                                    "recommendations": {"type": "array", "items": {"type": "string"}}
-                                }
-                            },
-                            "performanceAssessment": {
-                                "type": "object",
-                                "properties": {
-                                    "overallPerformance": {"type": "string", "enum": ["Poor", "Fair", "Good", "Excellent"]},
-                                    "keyBottlenecks": {"type": "array", "items": {"type": "string"}},
-                                    "recommendations": {"type": "array", "items": {"type": "string"}}
-                                }
-                            },
-                            "architectureAssessment": {
-                                "type": "object",
-                                "properties": {
-                                    "overallArchitecture": {"type": "string", "enum": ["Poor", "Fair", "Good", "Excellent"]},
-                                    "keyStrengths": {"type": "array", "items": {"type": "string"}},
-                                    "keyWeaknesses": {"type": "array", "items": {"type": "string"}},
-                                    "recommendations": {"type": "array", "items": {"type": "string"}}
-                                }
-                            },
-                            "dependencyAssessment": {
-                                "type": "object",
-                                "properties": {
-                                    "overallDependencyHealth": {"type": "string", "enum": ["Poor", "Fair", "Good", "Excellent"]},
-                                    "outdatedDependencies": {"type": "integer"},
-                                    "vulnerableDependencies": {"type": "integer"},
-                                    "recommendations": {"type": "array", "items": {"type": "string"}}
-                                }
-                            },
-                            "prioritizedActionItems": {"type": "array", "items": {"type": "string"}},
-                            "overallProjectHealth": {"type": "string", "enum": ["Critical", "At Risk", "Stable", "Healthy"]}
-                        },
-                        "required": ["overallSummary", "securityAssessment", "codeQualityAssessment", "performanceAssessment", "architectureAssessment", "dependencyAssessment", "prioritizedActionItems", "overallProjectHealth"]
-                    }
-                }
-            }
-        ]
+        # Determine overall project health
+        overall_health = "Healthy"
+        for analysis in structured_report.values():
+            if isinstance(analysis, dict) and analysis.get("overallQuality") == "Poor":
+                overall_health = "At Risk"
+                break
+            elif isinstance(analysis, dict) and analysis.get("overallQuality") == "Fair":
+                overall_health = "Stable"
 
-        input_content = json.dumps(agent_outputs, indent=2)
-        
-        messages = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": f"Analyze the following outputs from our specialized agents and generate a comprehensive report:\n\n{input_content}"}
-        ]
+        structured_report["overallProjectHealth"] = overall_health
+        structured_report["overallSummary"] = "Summary of analyses: " + ", ".join(
+            [f"{key}: {value.get('overallQuality', 'N/A')}" if isinstance(value, dict) else f"{key}: N/A" for key, value in structured_report.items()]
+        )
 
-        try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                tools=tools,
-                tool_choice={"type": "function", "function": {"name": "generate_comprehensive_report"}}
-            )
-            
-            if response.choices[0].message.tool_calls:
-                tool_call = response.choices[0].message.tool_calls[0]
-                if tool_call.function.name == "generate_comprehensive_report":
-                    return json.loads(tool_call.function.arguments)
-            
-            return {"error": "Failed to generate the report."}
-        except Exception as e:
-            return {"error": f"An error occurred while generating the report: {str(e)}"}
+        return structured_report
 
     def analyze_codebase(self):
         """
-        Analyze the codebase using all specialized agents and generate a comprehensive report.
+        Analyze the codebase using all specialized agents and generate a structured report.
         """
         # Initialize all agents
         architecture_agent = ArchitectureAgent()
@@ -133,7 +68,6 @@ class ManagerAgent:
         code_quality_agent = CodeQualityAgent()
         dependency_agent = DependencyAgent()
         performance_agent = PerformanceAgent()
-        manager_agent = ManagerAgent()
 
         # Perform analyses
         architecture_results = architecture_agent.analyze_codebase_architecture()
@@ -151,7 +85,7 @@ class ManagerAgent:
             "PERFORMANCE_ANALYSIS": performance_results
         }
 
-        # Generate comprehensive report
+        # Generate structured report
         return self.generate_report(agent_outputs)
 
     def main(self):

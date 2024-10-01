@@ -100,6 +100,24 @@ def main():
 
     console.log("Report generation complete.")
 
+    # Append results to json.json
+    json_file_path = 'json.json'
+    if os.path.exists(json_file_path):
+        with open(json_file_path, 'r') as json_file:
+            try:
+                existing_data = json.load(json_file)
+            except json.JSONDecodeError:
+                existing_data = []
+    else:
+        existing_data = []
+
+    existing_data.append(report_data)
+
+    with open(json_file_path, 'w') as json_file:
+        json.dump(existing_data, json_file, indent=4)
+
+    console.log("Analysis results appended to json.json.")
+
     # Keep the main thread alive
     try:
         while True:
