@@ -1,5 +1,6 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from .websocket_server import WebSocketServer
 from .message_broker import MessageBroker
 
@@ -13,10 +14,20 @@ message_broker = MessageBroker()
 # Include the WebSocket routes
 app.websocket("/ws")(ws_server.websocket_endpoint)
 
-# Function to notify subscribers when a report is generated
-def notify_report_generated(report):
-    message_broker.notify_subscribers(report)
-    message_broker.notify_all()  # Notify all subscribers
+# Pydantic model for report generation
+class Report(BaseModel):
+    title: str
+    content: str
+
+# Endpoint to generate a report
+@app.post("/reports/")
+def generate_report(report: Report):
+    try:
+        # Logic to generate the report
+        message_broker.notify_report_generated(report.title)
+        return {"message": "Report generated successfully!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Start the FastAPI server
 def start_server():

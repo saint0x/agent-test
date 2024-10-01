@@ -1,15 +1,19 @@
 from passlib.context import CryptContext
-from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException
-from jwt_utils import decode_token
 from db_utils import get_user
+from models import User  # Updated import
+from jwt_utils import decode_token  # Import decode_token
+from pydantic import BaseModel  # Ensure this import is included
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-class User(BaseModel):
+class UserCreate(BaseModel):
     username: str
+    password: str
+
+class UserInDB(User):
     hashed_password: str
 
 def verify_password(plain_password, hashed_password):
@@ -22,7 +26,7 @@ def authenticate_user(username: str, password: str):
     user = get_user(username)
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user['hashed_password']):  # Access hashed_password from the dictionary
         return False
     return user
 

@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import fnmatch
 from utils.config_manager import root as get_project_root
+from pydantic import BaseModel
 
 # Load environment variables
 load_dotenv()
@@ -14,43 +15,36 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Load the system prompt from .env
 STATIC_SYS_PROMPT = os.getenv("STATIC_SYS_PROMPT")
 
+class StaticAnalysis(BaseModel):
+    syntaxErrors: list[str]
+    potentialBugs: list[str]
+    securityVulnerabilities: list[str]
+    codeSmells: list[str]
+    styleViolations: list[str]
+    unusedCode: list[str]
+    complexityIssues: list[str]
+    potentialRuntimeErrors: list[str]
+    antiPatterns: list[str]
+    overallCodeHealth: str
+    keyRecommendations: list[str]
+
 class StaticAgent:
     def __init__(self):
         self.client = client
         self.system_prompt = STATIC_SYS_PROMPT
 
     def analyze_static_code(self, file_paths, file_contents):
-        """
-        Perform static code analysis on the codebase.
-        """
         tools = [
             {
                 "type": "function",
                 "function": {
                     "name": "report_static_analysis",
                     "description": "Report the static code analysis results of the codebase",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "syntaxErrors": {"type": "array", "items": {"type": "string"}},
-                            "potentialBugs": {"type": "array", "items": {"type": "string"}},
-                            "securityVulnerabilities": {"type": "array", "items": {"type": "string"}},
-                            "codeSmells": {"type": "array", "items": {"type": "string"}},
-                            "styleViolations": {"type": "array", "items": {"type": "string"}},
-                            "unusedCode": {"type": "array", "items": {"type": "string"}},
-                            "complexityIssues": {"type": "array", "items": {"type": "string"}},
-                            "potentialRuntimeErrors": {"type": "array", "items": {"type": "string"}},
-                            "antiPatterns": {"type": "array", "items": {"type": "string"}},
-                            "overallCodeHealth": {"type": "string", "enum": ["Poor", "Fair", "Good", "Excellent"]},
-                            "keyRecommendations": {"type": "array", "items": {"type": "string"}}
-                        },
-                        "required": ["overallCodeHealth", "keyRecommendations"]
-                    }
+                    "parameters": StaticAnalysis.schema(),
                 }
             }
         ]
 
-        # Prepare the content for analysis
         content = "\n\n".join([f"File: {path}\n\nContent:\n{content}" for path, content in zip(file_paths, file_contents)])
 
         messages = [
@@ -68,37 +62,25 @@ class StaticAgent:
         if response.choices[0].message.tool_calls:
             tool_call = response.choices[0].message.tool_calls[0]
             if tool_call.function.name == "report_static_analysis":
-                return json.loads(tool_call.function.arguments)
-        
+                return StaticAnalysis.parse_raw(tool_call.function.arguments)
+
         return None
 
     def should_analyze_file(self, file_path):
-        """
-        Determine if a file should be analyzed based on its extension and name.
-        """
         patterns_to_analyze = [
-            '*.py', '*.js', '*.ts', '*.php', '*.rb', '*.java', '*.go', '*.cs',  # Backend code
-            '*.html', '*.css', '*.scss', '*.jsx', '*.tsx',  # Frontend code
-            '*.sql',  # Database scripts
-            'Dockerfile', 'docker-compose.yml',  # Docker files
-            '*.xml', '*.json', '*.yaml', '*.yml',  # Configuration files
-            '*.c', '*.cpp', '*.h', '*.hpp',  # C/C++ files
-            '*.rs',  # Rust files
-            '*.scala',  # Scala files
-            '*.kt',  # Kotlin files
-            '*.swift',  # Swift files
-            '*.sh', '*.bash',  # Shell scripts
-            '*.ps1',  # PowerShell scripts
-            '*.vue',  # Vue.js files
-            '*.dart'  # Dart files
+            '*.py', '*.js', '*.ts', '*.php', '*.rb', '*.java', '*.go', '*.cs',
+            '*.html', '*.css', '*.scss', '*.jsx', '*.tsx',
+            '*.sql',
+            'Dockerfile', 'docker-compose.yml',
+            '*.xml', '*.json', '*.yaml', '*.yml',
+            '*.c', '*.cpp', '*.h', '*.hpp',
+            '*.rs', '*.scala', '*.kt', '*.swift',
+            '*.sh', '*.bash', '*.ps1'
         ]
 
         return any(fnmatch.fnmatch(file_path, pattern) for pattern in patterns_to_analyze)
 
     def analyze_codebase_static(self):
-        """
-        Perform static code analysis on all relevant files in a codebase.
-        """
         project_root = get_project_root()
         if not project_root:
             raise FileNotFoundError("butterfly.config.py not found in this or any parent directory")
@@ -116,16 +98,13 @@ class StaticAgent:
                         file_contents.append(file_content)
                     except Exception as e:
                         print(f"Error reading file {file_path}: {str(e)}")
-        
+
         return self.analyze_static_code(file_paths, file_contents)
 
 def main():
     agent = StaticAgent()
     results = agent.analyze_codebase_static()
-    
-    # Wrap the results in a dictionary with the key "STATIC_CODE_ANALYSIS"
     output = {"STATIC_CODE_ANALYSIS": results}
-    
     print(json.dumps(output, indent=2))
 
 if __name__ == "__main__":

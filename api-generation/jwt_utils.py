@@ -1,7 +1,6 @@
 import os
 from datetime import datetime, timedelta
 import jwt
-from jwt import PyJWTError
 from fastapi import HTTPException
 from pydantic import BaseModel
 
@@ -11,6 +10,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 class TokenData(BaseModel):
     username: str = None
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
@@ -35,5 +38,5 @@ def decode_token(token: str):
             raise credentials_exception
         token_data = TokenData(username=username)
         return token_data
-    except PyJWTError:
+    except Exception:
         raise credentials_exception

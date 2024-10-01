@@ -4,70 +4,45 @@ from pydantic import BaseModel
 from datetime import timedelta
 import os
 import sys
+import logging  # Import logging
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api_generation.db_utils import create_tables, get_user, insert_user # type: ignore
-from api_generation.auth_utils import User, verify_password, get_password_hash, authenticate_user # type: ignore
-from api_generation.jwt_utils import create_access_token, decode_token, ACCESS_TOKEN_EXPIRE_MINUTES # type: ignore
-from api_generation.rate_limit_utils import setup_limiter, rate_limit # type: ignore
-from api_generation.cors_utils import setup_cors # type: ignore
+from db_utils import create_tables, get_user, insert_user  # type: ignore
+from auth_utils import User, verify_password, get_password_hash, authenticate_user, UserCreate  # type: ignore
+from jwt_utils import create_access_token, decode_token, ACCESS_TOKEN_EXPIRE_MINUTES, Token  # type: ignore
+from rate_limit_utils import RateLimiter  # Updated import
+from cors_utils import CORSConfig  # Updated import
 
-app = FastAPI()
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+)
+
+logger = logging.getLogger(__name__)
+
+# Use lifespan for startup and shutdown events
+async def lifespan(app: FastAPI):
+    logger.info("🚀 Backend is starting...")
+    create_tables()
+    yield
+    logger.info("🛑 Backend is shutting down...")
+
+app = FastAPI(lifespan=lifespan)  # Pass lifespan to the FastAPI app
 
 # Setup rate limiting
-setup_limiter(app)
+rate_limiter = RateLimiter()  # Create an instance of RateLimiter
+rate_limiter.setup_limiter(app)  # Call setup_limiter on the app
 
 # Setup CORS
-setup_cors(app)
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-@app.on_event("startup")
-async def startup_event():
-    create_tables()
+CORSConfig(app)  # Create an instance of CORSConfig
 
 @app.get("/")
 async def root():
+    logger.info("🌍 Root endpoint accessed")  # Log with emoji
     return {"message": "API is running"}
-
-@app.post("/register")
-@rate_limit("3/minute")
-async def register_user(username: str, password: str):
-    if get_user(username):
-        raise HTTPException(status_code=400, detail="Username already registered")
-    hashed_password = get_password_hash(password)
-    insert_user(username, hashed_password)
-    return {"message": "User registered successfully"}
-
-@app.post("/token", response_model=Token)
-@rate_limit("5/minute")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
-
-@app.get("/users/me")
-async def read_users_me(token: str = Depends(oauth2_scheme)):
-    token_data = decode_token(token)
-    user = get_user(token_data.username)
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"username": user.username}
 
 if __name__ == "__main__":
     import uvicorn
