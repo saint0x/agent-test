@@ -1,11 +1,11 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from db_utils import get_user  # Updated import
-from pydantic import BaseModel  # Ensure this import is included
+from .db_utils import get_user
+from pydantic import BaseModel 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-class UserCreate(BaseModel):
+class CreateUser(BaseModel):
     api_key: str
 
 

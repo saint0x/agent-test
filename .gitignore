@@ -9,6 +9,10 @@
 /workspaces/butterfly/butterfly.config.py
 /workspaces/butterfly/setup.py
 
+/workspaces/butterfly/utils/visual_utils.py
+visual_utils.py
+utils/visual_utils.py
+
 # Python
 __pycache__/
 *.py[cod]

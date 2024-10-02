@@ -1,9 +1,9 @@
+import os
 import uuid
 import sqlite3
-import os
 from datetime import datetime, timedelta
 
-DATABASE_PATH = 'butterfly_api_keys.db'
+DATABASE_PATH = os.getenv('DATABASE_PATH')
 
 def create_api_key_table():
     conn = sqlite3.connect(DATABASE_PATH)

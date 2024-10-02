@@ -1,11 +1,9 @@
 import logging
-import os
 import sqlite3
 import uvicorn
 import time
-from fastapi import FastAPI
 from threading import Thread
-from main import app  # Import the FastAPI app directly
+from main import app
 
 # Configure logging
 logging.basicConfig(

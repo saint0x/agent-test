@@ -8,7 +8,7 @@ from agents.dependency_agent import DependencyAgent
 from agents.performance_agent import PerformanceAgent
 from agents.static_agent import StaticAgent
 from dotenv import load_dotenv
-from db_utils import insert_user  # Corrected import path
+from api_generation.utils.db_utils import insert_user
 
 # Configure logging
 logging.basicConfig(

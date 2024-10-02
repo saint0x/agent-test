@@ -1,5 +1,4 @@
 import os
-import json
 from pathlib import Path
 
 def root(start_path=None):
@@ -58,5 +57,5 @@ def update_config(key, value):
             f.write('\n'.join(lines))
             f.truncate()
         else:
-            f.seek(0, 2)  # Go to the end of the file
+            f.seek(0, 2)
             f.write(f"\n{key} = {repr(value)}\n")

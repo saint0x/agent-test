@@ -1,6 +1,7 @@
+import os
 import sqlite3
 
-DATABASE_PATH = 'butterfly_api_keys.db'
+DATABASE_PATH = os.getenv('DATABASE_PATH')
 
 
 def create_tables():

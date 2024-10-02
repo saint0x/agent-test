@@ -1,9 +1,7 @@
 import sqlite3
 
-# Connect to the database (or create it)
 conn = sqlite3.connect('root.db')
 
-# Create a cursor object using the cursor() method
 cursor = conn.cursor()
 
 # Create users table
